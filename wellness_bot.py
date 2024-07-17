@@ -1,13 +1,11 @@
 import os
 import telebot
-from flask import Flask, jsonify
-import multiprocessing
-import time
 import requests
 import logging
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from dotenv import load_dotenv
 import random
+import time
 
 # Load environment variables
 load_dotenv()
@@ -15,9 +13,6 @@ load_dotenv()
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-# Create Flask app
-app = Flask(__name__)
 
 # Bot token and API key
 bot_token = os.getenv('BOT_TOKEN')
@@ -236,46 +231,10 @@ def send_daily_quotes():
         # Send daily at 8 AM
         time.sleep(86400)
 
-# Ping endpoint to keep the server active
-@app.route('/ping', methods=['GET'])
-def ping():
-    return jsonify({"message": "pong"}), 200
-
-# Function to start the Flask app
-def start_flask():
-    logger.info('Starting Flask app...')
-    app.run(host='0.0.0.0', port=5000)
-
-# Function to start the bot
-def start_bot():
+if __name__ == '__main__':
+    # Start the bot
     logger.info('Starting Telegram bot...')
     bot.polling(none_stop=True)
-
-if __name__ == '__main__':
-    # Create processes for Flask and TeleBot
-    flask_process = multiprocessing.Process(target=start_flask)
-    bot_process = multiprocessing.Process(target=start_bot)
-    quote_process = multiprocessing.Process(target=send_daily_quotes)
-
-    # Start all processes
-    flask_process.start()
-    bot_process.start()
-    quote_process.start()
-
-    try:
-        # Keep the main process alive to catch KeyboardInterrupt
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        # Terminate all processes on Ctrl+C
-        logger.info('Shutting down...')
-        flask_process.terminate()
-        bot_process.terminate()
-        quote_process.terminate()
-
-        # Wait for processes to terminate
-        flask_process.join()
-        bot_process.join()
-        quote_process.join()
-
-        logger.info('Shutdown complete.')
+    
+    # Start sending daily quotes
+    send_daily_quotes()
