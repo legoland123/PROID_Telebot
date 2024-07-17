@@ -6,6 +6,7 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from dotenv import load_dotenv
 import random
 import time
+from flask import Flask, request, abort
 
 # Load environment variables
 load_dotenv()
@@ -18,6 +19,9 @@ logger = logging.getLogger(__name__)
 bot_token = os.getenv('BOT_TOKEN')
 api_key = os.getenv('API_KEY')
 bot = telebot.TeleBot(bot_token)
+
+# Flask app
+app = Flask(__name__)
 
 # Store user subscriptions (this will reset on bot restart)
 subscribers = set()
@@ -231,10 +235,24 @@ def send_daily_quotes():
         # Send daily at 8 AM
         time.sleep(86400)
 
+@app.route('/' + bot_token, methods=['POST'])
+def getMessage():
+    json_str = request.get_data().decode('UTF-8')
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return '!', 200
+
+@app.route('/')
+def webhook():
+    bot.remove_webhook()
+    bot.set_webhook(url='https://proid-telebot.onrender.com/' + bot_token)
+    return 'Webhook set!', 200
+
 if __name__ == '__main__':
-    # Start the bot
-    logger.info('Starting Telegram bot...')
-    bot.polling(none_stop=True)
-    
-    # Start sending daily quotes
-    send_daily_quotes()
+    # Start Flask server
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+
+    # Start sending daily quotes in a separate thread
+    import threading
+    daily_quotes_thread = threading.Thread(target=send_daily_quotes)
+    daily_quotes_thread.start()
